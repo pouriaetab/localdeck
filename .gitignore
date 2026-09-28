@@ -1,0 +1,24 @@
+# Environments and tooling
+.venv/
+.venv-*/
+node_modules/
+.pnpm-store/
+.tools/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Build output
+frontend/dist/
+*.app/
+
+# Your own state: the project list, logs and backups stay on your machine.
+data/*
+!data/localdeck.example.json
+*.log
+
+# Private notes (never published)
+notes/
+
+# OS
+.DS_Store

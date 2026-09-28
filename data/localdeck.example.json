@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "dashboard": {
+    "expanded_project_id": null,
+    "categories": [
+      "Web",
+      "Tools"
+    ]
+  },
+  "projects": [
+    {
+      "id": "my_api",
+      "name": "My API",
+      "working_directory": "/Users/you/projects/my-api",
+      "start_command": "./run.sh",
+      "project_type": "web",
+      "web_url": "http://127.0.0.1:5173",
+      "category": "Web",
+      "startup_timeout": 30,
+      "auto_start": false,
+      "environment": {},
+      "ports": [
+        {
+          "name": "Backend API",
+          "value": 8000,
+          "env": "BACKEND_PORT"
+        },
+        {
+          "name": "Web UI",
+          "value": 5173,
+          "env": "FRONTEND_PORT"
+        }
+      ],
+      "alt_start": {
+        "label": "Phone",
+        "args": "--tunnel",
+        "hint": "also opens a public tunnel",
+        "open_url_pattern": "https://[a-z0-9-]+\\.example-tunnel\\.dev"
+      },
+      "panel": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 12,
+        "visible": true,
+        "collapsed": false
+      }
+    },
+    {
+      "id": "nightly_report",
+      "name": "Nightly report",
+      "working_directory": "/Users/you/projects/reports",
+      "start_command": "python3 build_report.py",
+      "project_type": "terminal",
+      "web_url": null,
+      "category": "Tools",
+      "startup_timeout": 15,
+      "auto_start": false,
+      "environment": {},
+      "ports": [],
+      "panel": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 10,
+        "visible": true,
+        "collapsed": false
+      }
+    }
+  ]
+}
