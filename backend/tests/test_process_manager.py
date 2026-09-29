@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 from app.models import PanelLayout, ProjectConfig, ProjectType
-from app.process_manager import ProcessManager, ProcessManagerError
+from app.process_manager import ProcessManager, ProcessManagerError, shell_flags
 
 
 
@@ -101,6 +101,24 @@ class ProcessManagerTests(unittest.IsolatedAsyncioTestCase):
             await self.manager.start(project)
 
         self.assertEqual(self.manager.snapshot(project.id)["status"], "Failed")
+
+    async def test_zsh_without_startup_files_starts_without_the_setup_wizard(self) -> None:
+        # A fresh account has no ~/.zshrc. An interactive zsh then opens its
+        # first-run wizard and waits for a key forever, so nothing ever starts.
+        with tempfile.TemporaryDirectory() as empty_home:
+            project = self._project("echo ready", name="FreshHome")
+            project.environment = {"HOME": empty_home}
+            self.manager.attach_projects([project])
+            await self.manager.start(project)
+            await self._wait_for(lambda: self.manager.snapshot(project.id)["status"] == "Stopped")
+            self.assertIn("ready", "\n".join(self.manager.snapshot(project.id)["logs"]))
+
+    def test_shell_flags(self) -> None:
+        with tempfile.TemporaryDirectory() as home:
+            self.assertEqual(shell_flags("/bin/zsh", {"HOME": home}), "-lc")
+            open(os.path.join(home, ".zshrc"), "w").close()
+            self.assertEqual(shell_flags("/bin/zsh", {"HOME": home}), "-ilc")
+            self.assertEqual(shell_flags("/bin/bash", {"HOME": home}), "-ilc")
 
     async def test_stop_kills_child_processes(self) -> None:
         child_program = (

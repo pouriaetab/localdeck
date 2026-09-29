@@ -281,7 +281,7 @@ def _finish(checks: List[Dict[str, Any]]) -> Dict[str, Any]:
         "overall": overall,
         "counts": counts,
         "checks": checks,
-        "checked_at": dt.datetime.utcnow().isoformat() + "Z",
+        "checked_at": dt.datetime.now(dt.timezone.utc).replace(tzinfo=None).isoformat() + "Z",
     }
 
 

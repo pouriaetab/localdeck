@@ -494,7 +494,7 @@ class AppRuntime:
                 }
 
         result = await asyncio.to_thread(fetch)
-        result["checked_at"] = dt.datetime.utcnow().isoformat() + "Z"
+        result["checked_at"] = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None).isoformat() + "Z"
         return result
 
     def _persist(self) -> None:

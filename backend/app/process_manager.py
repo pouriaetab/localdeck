@@ -12,6 +12,7 @@ import signal
 import subprocess
 import time
 from collections import deque
+from pathlib import Path
 from urllib.parse import urlparse
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Deque, Dict, Optional
@@ -19,6 +20,24 @@ from typing import Any, Awaitable, Callable, Deque, Dict, Optional
 from .models import ProjectConfig, ProjectStatus
 
 Emitter = Callable[[str, Dict[str, Any]], Awaitable[None]]
+
+
+# zsh reads these from $ZDOTDIR (or $HOME). With none of them present, an
+# INTERACTIVE zsh runs zsh-newuser-install: a full-screen first-run wizard that
+# waits for a keypress forever. A fresh Linux account (a CI runner, a new user)
+# has none, so `zsh -ilc cmd` hangs there and the project never starts. -i only
+# exists to load ~/.zshrc; when there is no startup file there is nothing to
+# load, so drop it.
+ZSH_STARTUP_FILES = (".zshenv", ".zprofile", ".zshrc", ".zlogin")
+
+
+def shell_flags(shell: str, env: Dict[str, str]) -> str:
+    """The flags to start a project's command with: "-ilc", or "-lc" (see above)."""
+    if os.path.basename(shell) == "zsh":
+        home = env.get("ZDOTDIR") or env.get("HOME") or str(Path.home())
+        if not any((Path(home) / name).exists() for name in ZSH_STARTUP_FILES):
+            return "-lc"
+    return "-ilc"
 
 
 class ProcessManagerError(RuntimeError):
@@ -145,7 +164,7 @@ class ProcessManager:
         managed.last_error = None
         managed.exit_code = None
         managed.intentional_stop = False
-        managed.started_at = dt.datetime.utcnow().isoformat() + "Z"
+        managed.started_at = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None).isoformat() + "Z"
         managed.stopped_at = None
         await self._emit_project_update(project.id)
 
@@ -155,14 +174,15 @@ class ProcessManager:
         # Make non-interactive launches behave like the user's normal terminal.
         env.setdefault("TERM", "xterm-256color")
 
-        # Use an *interactive* login shell (-i -l) so that ~/.zshrc is sourced.
+        # Use an *interactive* login shell (-i -l) so that ~/.zshrc is sourced
+        # (shell_flags drops -i for a zsh with no startup files; see above).
         # Most users configure pyenv/conda/nvm/homebrew PATH inside ~/.zshrc, which a
         # plain `-lc` shell skips — that is a common cause of "command not found"
         # errors when a project starts fine in Terminal but fails here.
         shell_command = os.environ.get("LOCALDECK_SHELL", "/bin/zsh")
         try:
             process = subprocess.Popen(
-                [shell_command, "-ilc", full_command],
+                [shell_command, shell_flags(shell_command, env), full_command],
                 cwd=working_dir,
                 env=env,
                 stdin=slave_fd,
@@ -338,7 +358,7 @@ class ProcessManager:
         managed.exit_code = return_code
         managed.pid = None
         managed.process = None
-        managed.stopped_at = dt.datetime.utcnow().isoformat() + "Z"
+        managed.stopped_at = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None).isoformat() + "Z"
 
         if managed.running_task and not managed.running_task.done():
             managed.running_task.cancel()
