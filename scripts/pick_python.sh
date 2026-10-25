@@ -16,17 +16,23 @@ py_line() {   # X.Y of an interpreter (or a venv's python); prints nothing when 
   fi
 }
 
-py_find_line() {   # an interpreter for one line, or nothing
+py_find_line() {   # an interpreter for one line, or nothing. PY_ONLY_PATH=1 looks on PATH only (tests).
   local line="$1" c
-  for c in "/Library/Frameworks/Python.framework/Versions/$line/bin/python$line" \
-           "$(command -v uv >/dev/null 2>&1 && uv python find --managed-python "$line" 2>/dev/null || true)" \
-           "/opt/homebrew/bin/python$line" "/usr/local/bin/python$line" \
-           "$(command -v "python$line" 2>/dev/null || true)"; do
-    if [ -n "$c" ] && [ "$(py_line "$c")" = "$line" ]; then
-      echo "$c"
-      return 0
-    fi
-  done
+  if [ "${PY_ONLY_PATH:-0}" != 1 ]; then
+    for c in "/Library/Frameworks/Python.framework/Versions/$line/bin/python$line" \
+             "$(command -v uv >/dev/null 2>&1 && uv python find --managed-python "$line" 2>/dev/null || true)" \
+             "/opt/homebrew/bin/python$line" "/usr/local/bin/python$line"; do
+      if [ -n "$c" ] && [ "$(py_line "$c")" = "$line" ]; then
+        echo "$c"
+        return 0
+      fi
+    done
+  fi
+  c="$(command -v "python$line" 2>/dev/null || true)"
+  if [ -n "$c" ] && [ "$(py_line "$c")" = "$line" ]; then
+    echo "$c"
+    return 0
+  fi
   return 1
 }
 
