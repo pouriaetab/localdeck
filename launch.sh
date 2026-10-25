@@ -22,10 +22,27 @@ if [[ -z "$NODE_BIN" || ! -x "$NODE_BIN" ]]; then
   NODE_BIN="$(command -v node || true)"
 fi
 
-# --- first-run setup -------------------------------------------------------
+# --- one localdeck at a time ----------------------------------------------
+# A second launch while one runs would rebuild the venv under the running server and then
+# lose the port anyway. Open the running one instead.
+if curl -s -m 2 "${URL}/api/health" >/dev/null 2>&1; then
+  echo "Something is already serving ${URL} (localdeck, most likely); opening it."
+  echo "To run a second copy, pick another port: LOCALDECK_PORT=8910 ./launch.sh"
+  if [[ "${LOCALDECK_NO_OPEN:-0}" != "1" ]] && command -v open >/dev/null 2>&1; then open "$URL"; fi
+  exit 0
+fi
+
+# --- setup: the first run, and a newer Python ------------------------------
+# setup.sh also runs when the backend venv is not on the newest Python line it can use
+# (scripts/pick_python.sh), so installing a newer Python moves localdeck onto it.
+source "$ROOT_DIR/scripts/pick_python.sh"
+PY_SKIP_FILE="$ROOT_DIR/.python-lines-tried"
+WANT_PY="$(py_pick "$ROOT_DIR/backend/requirements.txt" || true)"
+HAVE_LINE="$(py_line "$ROOT_DIR/.venv/bin/python")"
 if [[ ! -x "$ROOT_DIR/.venv/bin/python" || ! -f "$VITE_ENTRYPOINT" ]] \
-  || ! "$ROOT_DIR/.venv/bin/python" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
-  echo "First-time setup: installing dependencies..."
+  || ! "$ROOT_DIR/.venv/bin/python" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1 \
+  || [[ -n "$WANT_PY" && "$HAVE_LINE" != "$(py_line "$WANT_PY")" ]]; then
+  echo "Setup: installing dependencies (backend Python ${HAVE_LINE:-none} -> $(py_line "$WANT_PY"))..."
   if [[ ! -x "$ROOT_DIR/setup.sh" ]]; then
     echo "Missing setup.sh. Cannot continue." >&2
     exit 1
