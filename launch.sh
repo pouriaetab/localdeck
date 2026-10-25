@@ -23,7 +23,8 @@ if [[ -z "$NODE_BIN" || ! -x "$NODE_BIN" ]]; then
 fi
 
 # --- first-run setup -------------------------------------------------------
-if [[ ! -x "$ROOT_DIR/.venv/bin/python" || ! -f "$VITE_ENTRYPOINT" ]]; then
+if [[ ! -x "$ROOT_DIR/.venv/bin/python" || ! -f "$VITE_ENTRYPOINT" ]] \
+  || ! "$ROOT_DIR/.venv/bin/python" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
   echo "First-time setup: installing dependencies..."
   if [[ ! -x "$ROOT_DIR/setup.sh" ]]; then
     echo "Missing setup.sh. Cannot continue." >&2
