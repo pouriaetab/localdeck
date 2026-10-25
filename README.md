@@ -47,10 +47,11 @@ larger scale with internal developer platforms; this is the single developer ver
 
 ## Quick start
 
-Requirements: Python 3.10 or newer and Node.js 18 or newer. The `python3` that ships
-with macOS is 3.9, which stopped getting security fixes in October 2025: install Python
-from python.org, Homebrew or uv, and run `PYTHON_BIN=python3.14 ./setup.sh` if `python3`
-is still the old one. macOS is the primary platform; the core also runs on Linux (the
+Requirements: Python 3.10 or newer and Node.js 18 or newer. Setup picks the newest Python
+installed (3.15 first, from python.org, uv or Homebrew) and moves localdeck onto a newer one
+when you install it; `PYTHON_BIN=/path/to/python3.x ./setup.sh` picks one by hand. The
+`python3` that ships with macOS is 3.9, which stopped getting security fixes in October
+2025, so it is never used. macOS is the primary platform; the core also runs on Linux (the
 launchd and Mach-O features are macOS only, and without zsh set
 `LOCALDECK_SHELL=/bin/bash`).
 

@@ -1,6 +1,7 @@
 # Environments and tooling
 .venv/
 .venv-*/
+.python-lines-tried
 node_modules/
 .pnpm-store/
 .tools/
