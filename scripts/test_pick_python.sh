@@ -32,8 +32,10 @@ for SH in bash zsh; do
   T="$(mktemp -d)"; mkdir -p "$T/bin" "$T/proj"
   make_fake "$T/bin" 3.15; make_fake "$T/bin" 3.14; make_fake "$T/old" 3.9
   echo "fastapi" > "$T/proj/req.txt"
+  # PY_ONLY_PATH=1: the machine's own Pythons (a macOS CI runner has several in /Library/Frameworks and
+  # /opt/homebrew) must never stand in for the fakes.
   run() {   # run 'shell code' in a fresh shell, strict mode, with only the fakes on PATH
-    env -i HOME="$T" PATH="$T/bin:/usr/bin:/bin" FAIL_LINES="${FAIL_LINES:-}" PYTHON_BIN="${PYTHON_BIN:-}" \
+    env -i HOME="$T" PATH="$T/bin:/usr/bin:/bin" PY_ONLY_PATH=1 FAIL_LINES="${FAIL_LINES:-}" PYTHON_BIN="${PYTHON_BIN:-}" \
       "$SH" -c "set -euo pipefail; cd '$T/proj'; source '$PICK'; PY_LINES=(3.15 3.14); PY_SKIP_FILE='$T/proj/.tried'; $1" 2>"$T/err"
   }
   "$T/old/python3.9" -m venv "$T/proj/.venv"
