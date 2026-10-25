@@ -7,10 +7,20 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT_DIR"
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+NEW_ENOUGH='import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)'
 
-# Backend. The venv is checked by whether its interpreter RUNS, not by whether the
-# folder exists: a venv whose base interpreter was removed still looks fine on disk.
-if ! "$ROOT_DIR/.venv/bin/python" -c "import sys" >/dev/null 2>&1; then
+# Python 3.10 or newer: current FastAPI and Starlette need it, and the python3 that ships
+# with macOS (3.9) no longer gets security fixes.
+if ! "$PYTHON_BIN" -c "$NEW_ENOUGH" >/dev/null 2>&1; then
+  echo "LocalDeck needs Python 3.10 or newer, and $PYTHON_BIN is $("$PYTHON_BIN" -V 2>&1)." >&2
+  echo "Install one (python.org, Homebrew or uv), then run: PYTHON_BIN=python3.14 ./setup.sh" >&2
+  exit 1
+fi
+
+# Backend. The venv is checked by whether its interpreter RUNS and is new enough, not by
+# whether the folder exists: a venv whose base interpreter was removed still looks fine
+# on disk, and one built on Python 3.9 cannot take the current requirements.
+if ! "$ROOT_DIR/.venv/bin/python" -c "$NEW_ENOUGH" >/dev/null 2>&1; then
   rm -rf "$ROOT_DIR/.venv"
   "$PYTHON_BIN" -m venv "$ROOT_DIR/.venv"
 fi
