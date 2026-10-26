@@ -18,7 +18,11 @@ case "$1" in
   -m)
     case "$2" in
       venv) mkdir -p "$3/bin"; sed "s#^LINE=.*#LINE=$LINE#" "$0" > "$3/bin/python"; chmod +x "$3/bin/python" ;;
-      pip) if [[ " ${FAIL_LINES:-} " == *" $LINE "* && "$*" == *" -r "* ]]; then echo "no wheel for $LINE" >&2; exit 1; fi ;;
+      pip) if [[ " ${FAIL_LINES:-} " == *" $LINE "* && "$*" == *" -r "* ]]; then
+             # PIP_LOG counts the tries; after 3 it lets one through, so a retry loop shows up as a failed check, not a hang
+             if [ -n "${PIP_LOG:-}" ]; then echo x >> "$PIP_LOG"; [ "$(wc -l < "$PIP_LOG")" -gt 3 ] && exit 0; fi
+             echo "no wheel for $LINE" >&2; exit 1
+           fi ;;
     esac ;;
 esac
 PY
@@ -36,6 +40,7 @@ for SH in bash zsh; do
   # /opt/homebrew) must never stand in for the fakes.
   run() {   # run 'shell code' in a fresh shell, strict mode, with only the fakes on PATH
     env -i HOME="$T" PATH="$T/bin:/usr/bin:/bin" PY_ONLY_PATH=1 FAIL_LINES="${FAIL_LINES:-}" PYTHON_BIN="${PYTHON_BIN:-}" \
+      PIP_LOG="${PIP_LOG:-}" \
       "$SH" -c "set -euo pipefail; cd '$T/proj'; source '$PICK'; PY_LINES=(3.15 3.14); PY_SKIP_FILE='$T/proj/.tried'; $1" 2>"$T/err"
   }
   "$T/old/python3.9" -m venv "$T/proj/.venv"
@@ -68,6 +73,12 @@ for SH in bash zsh; do
   FAIL_LINES="" run 'py_venv .venv req.txt'; rc=$?
   [ $rc = 0 ] && [ "$("$T/proj/.venv/bin/python" -c x)" = 3.15 ] && [ -z "$(ls -d "$T"/proj/.venv-* 2>/dev/null)" ]
   ok $? "no venv yet: one is built on the newest line"
+  rm -rf "$T"/proj/.venv* "$T/proj/.tried"
+  "$T/old/python3.9" -m venv "$T/proj/.venv"
+  : > "$T/pip.log"
+  FAIL_LINES="3.15" PYTHON_BIN="$T/bin/python3.15" PIP_LOG="$T/pip.log" run 'py_venv .venv req.txt'; rc=$?
+  [ $rc = 1 ] && [ "$(wc -l < "$T/pip.log" | tr -d ' ')" = 1 ] && [ "$("$T/proj/.venv/bin/python" -c x)" = 3.9 ]
+  ok $? "PYTHON_BIN whose packages fail: one try, then it says so and the old venv is back (no endless retry)"
   out="$(run 'echo "[$(py_line ./nothing)]"')"
   [ "$out" = "[]" ]
   ok $? "py_line of a missing interpreter is empty, and strict mode survives it"
