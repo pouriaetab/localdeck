@@ -65,7 +65,8 @@ py_pick() {   # py_pick REQ_FILE...: the interpreter to build the venv with
 # py_venv VENV REQ_FILE...: VENV ends up on the picked line with the requirements installed. A venv on another
 # line is moved aside, never deleted (VENV-py3.11-<when>), and a new one is built. If the packages do not install
 # on the new line, the new one is moved aside too (VENV-failed-py3.15-<when>), the line is written to the skip
-# file, the old venv comes back and the next line is tried. Nothing happens when VENV is already on the picked line.
+# file, the old venv comes back and the next line is tried (with PYTHON_BIN set there is no next line: it returns 1).
+# Nothing happens when VENV is already on the picked line.
 py_venv() {
   local venv="$1"; shift
   local want line have old stamp f
@@ -93,6 +94,7 @@ py_venv() {
     if [ -e "$venv" ]; then mv "$venv" "$venv-failed-py$line-$stamp"; fi
     echo "$line $(py_reqs_sum "$@")" >> "${PY_SKIP_FILE:-.python-lines-tried}"
     if [ -n "$old" ]; then mv "$old" "$venv"; fi
+    [ -z "${PYTHON_BIN:-}" ] || return 1   # PYTHON_BIN names one interpreter: one try, never an endless retry
   done
   return 1
 }
